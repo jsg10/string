@@ -6,12 +6,13 @@
 
 [Electron](https://electronjs.org/)  
 [Webix](https://webix.com/)  
-[Monaco editor](https://microsoft.github.io/monaco-editor/)
-[xterm.js](https://xtermjs.org/)
+[Monaco editor](https://microsoft.github.io/monaco-editor/)  
+[xterm.js](https://xtermjs.org/)  
 
-项目路线图：
 
-[0.1.1版本开发目标，目标时间9月1日]
+### 0.1.1版本开发目标
+
+目标时间9月1日
 
 - 代码块拖拽到Terminal功能
 - 针对Go语言代码块的精细维护，主要基于Go语言宝典
