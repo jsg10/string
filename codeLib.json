@@ -1,0 +1,51 @@
+[
+    { "value": "单行注释", "code": "\/\/ 注释内容" },
+    { "value": "多行注释", "code": "\/\/ 注释内容1\n\/\/ 注释内容2\n\/\/ 注释内容3" },
+    {
+      "value": "GO程序骨架", "open": true, "code": "\/\/ /包相对路径/hello \npackage main\nimport \"fmt\"\n\nfunc main() {\n\tfmt.Println(\"Hello, 世界\")\n}",
+      "data": [
+        { "value": "包声明：package", "code": "package main" },
+        { "value": "引入包：import", "code": "import (\n\t\"fmt\"\n\t\"os\"\n)" },
+        { "value": "函数声明：func", "code": "\/\/ 这是main函数的注释\nfunc main() {\n\tvar s, sep string\n\tfor i := 1; i < len(os.Args); i++ {\n\t\ts += sep + os.Args[i]\n\t\tsep = \" \"\n\t}\n\tfmt.Println(s)\n}" }
+      ]
+    },
+    {
+      "value": "GO语言关键字", "open": false, "code": "\/\/ break      default       func     interface   select\ncase       defer         go       map         struct\nchan       else          goto     package     switch\nconst      fallthrough   if       range       type\ncontinue   for           import   return      var",
+
+      "data": [
+
+        { "value": "const", "code": "" },
+        { "value": "var", "code": "" },
+        { "value": "struct", "code": "" },
+        { "value": "interface", "code": "" },
+        { "value": "map", "code": "" },
+
+        { "value": "package", "code": "" },
+        { "value": "import", "code": "" },
+        { "value": "func", "code": "" },
+
+        { "value": "if", "code": "" },
+        { "value": "else", "code": "" },
+        { "value": "for", "code": "" },
+        { "value": "switch", "code": "" },
+        { "value": "return", "code": "" },
+        { "value": "break", "code": "" },
+
+        { "value": "chan", "code": "" },
+        { "value": "select", "code": "" },
+        { "value": "default", "code": "" },
+        { "value": "go", "code": "" },
+        { "value": "fallthrough", "code": "" },
+        { "value": "goto", "code": "" },
+        { "value": "defer", "code": "" },
+        { "value": "case", "code": "" },
+        { "value": "continue", "code": "" },
+        { "value": "type", "code": "" },
+        { "value": "range", "code": "" }
+      ]
+    },
+    { "value": "GO语言圣经", "code": "\/\/ 更多内容请参考：\n\/\/ https://wizardforcel.gitbooks.io/gopl-zh/content/index.html" }
+]
+
+
+

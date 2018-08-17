@@ -1,0 +1,47 @@
+.webix_tree_folder {
+  width: 0px;
+}
+
+.webix_tree_file {
+  width: 0px;
+}
+
+.webix_tree_folder_open {
+  width: 0px;
+}
+
+.webix_tree_home {
+  width: 0px;
+}
+
+.webix_icon_btn {
+  color: whitesmoke;
+}
+
+.webix_el_button {
+  color: #ffffff;
+}
+
+@media (pointer:coarse) {
+  body.webix_full_screen{
+    overflow: auto;
+  }
+}
+
+.webix_template {
+  margin: 0;
+  padding: 0;
+}
+
+body,html{
+  margin:0px;
+  height:100%;
+}
+
+.terminal {
+  background-color: #393939 !important;
+  color: rgb(190, 190, 190);
+  font-family: courier-new, courier, monospace;
+  font-feature-settings: "liga" 0;
+  position: relative;
+}

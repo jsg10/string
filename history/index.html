@@ -1,0 +1,207 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+  <link rel="stylesheet" href="webix/webix.css" type="text/css">
+  <!-- <link rel="stylesheet" href="webix/skins/contrast.css" type="text/css"> -->
+  <script src="webix/webix.js" type="text/javascript"></script>
+  <link rel="stylesheet" href="webix/custom.css" type="text/css">
+  <script>
+    // Monaco插件需要一种特别的Require 
+    // Monaco uses a custom amd loader that overrides node's require.
+    // Keep a reference to node's require so we can restore it after executing the amd loader file.
+    var nodeRequire = global.require;
+  </script>
+  <script src="webix/monaco/min/vs/loader.js"></script>
+  <script>
+    // Save Monaco's amd require and restore Node's require
+    var amdRequire = global.require;
+    global.require = nodeRequire;
+  </script>
+</head>
+
+<body>
+
+  <!-- 这是打开和新建文件用的隐藏 Input 标签 -->
+  <input type="file" id="input" onchange="handleFiles(this.files)" style="display:none">
+
+  <script type="text/javascript" charset="utf-8">
+
+    // 软件本身的菜单加载以及与main.js通过ipcRenderer通讯
+    // 部分代码参考了这篇Electron创建文本编辑器的教程
+    // https://www.jianshu.com/p/57d910008612
+
+    // import { ipcRenderer, remote } from 'electron';
+    // const { Menu, MenuItem, dialog } = remote;
+
+    // 全局声明编辑器的对象，以便各个子函数中可以被引用
+    var editor = {};
+
+    // 定义文件新建、打开、保存相关的全局变量
+    var filePath = "";
+    var fileSaved = "";
+
+    // require node modules before loader.js comes in
+    // codeInEditor = codeInEditor + "good ";
+    var path = require('path');
+    function uriFromPath(_path) {
+      var pathName = path.resolve(_path).replace(/\\/g, '/');
+      if (pathName.length > 0 && pathName.charAt(0) !== '/') {
+        pathName = '/' + pathName;
+      }
+      return encodeURI('file://' + pathName);
+    }
+    amdRequire.config({
+      baseUrl: uriFromPath(path.join(__dirname, 'webix/monaco/min'))
+    });
+    // workaround monaco-css not understanding the environment
+    self.module = undefined;
+    // workaround monaco-typescript not understanding the environment
+    self.process.browser = true;
+    amdRequire(['vs/editor/editor.main'], function () {
+      editor = monaco.editor.create(document.getElementById('container'), {
+        value: [
+          "",
+        ].join('\n'),
+        scrollBeyondLastLine: false,
+        automaticLayout: true,
+        theme: "vs-dark",
+        language: 'go',
+        fontSize: 13.5,
+        fontFamily: "Menlo"
+      });
+    });
+
+    // 这个是用Webix声明的界面布局
+    webix.ui({
+      view: "layout", //可选的声明
+      responsive: true,
+      rows: [
+        {
+          view: "toolbar", elements: [
+            { view: "icon", id: "fileOpenBTN", click: "fileLoading()", icon: "folder-open" },
+            { view: "icon", id: "fileSaveBTN", click: "fileSaving()", icon: "save" },
+            { view: "label", id: "filePath", template: filePath, width: 400, type: "clean" },
+            { gravity: 2 },
+            // { view: "icon", id: "dbHelper", click: "dbHelper()", icon: "database" },
+            { view: "icon", id: "codeBarBTN", click: "codeBar()", icon: "puzzle-piece" },
+          ]
+        },
+        {
+          height: 755,
+          width: 0, // 0表示自适应宽度
+          responsive: true,
+          cols: [
+            { view: "template", template: "<div id=\"container\" style=\"width:100%;height:100%;margin:0;padding:0\"></div>", autoheight: true, css: "no_paddingNDmargin" },
+            {
+              view: "tree",
+              id: "codeBar",
+              multiselect: true,
+              select: true,
+              type: "lineTree",
+              drag: true,
+              width: 300,
+              hidden: true,
+              autoheight: true,
+              data: [
+                { id: "", value: "// gopl.io/ch1/helloworld", code: "coding...\n\tyes\n\t\t{\t\nno" },
+                { id: "", value: "package main", code: "package main" },
+                { id: "import", value: 'import "fmt"', code: "import \"fmt\"" },
+                {
+                  id: "func", value: "func main() {", open: true,
+                  data: [
+                    { id: "fmt", value: 'fmt.Println("Hello, 世界")', code: "fmt.Println(\"Hello, 世界\")" },
+                  ]
+                },
+                { id: "endfunc", value: '} //end func', code: "coding...\n\tyes\n\t\t{\t\nno" },
+              ]
+            }
+
+          ]
+        }]
+    });
+
+    // 这个是隐藏Input标签的相应JS对象
+    var inputElement = document.getElementById("input");
+    // inputElement.addEventListener("change", handleFiles(), false);
+
+    function handleFiles(f) {
+      var file = f.item(0);
+      var reader = new FileReader();
+
+      reader.onload = function () {
+        // 生成（初始化）编辑器，并且将读取到的文本内容注入到编辑器的Set方法
+        fileOpening(reader.result);
+        // editor.executeEdits("", [{ range: new monaco.Range(1, 1, 1, 1), text: "prepend" }]);
+      }
+      reader.readAsText(file);
+
+      console.log(file);
+      filePath = file.path;
+      $$("filePath").setHTML(filePath);
+    };
+
+    // 这是点击打开按钮时的触发函数
+    function fileLoading() {
+      inputElement.click();
+    };
+
+    // 将代码载入Monaco编辑器，更新编辑器内容
+    function fileOpening(codeInEditor) {
+      // 更新编辑器内容
+      editor.setValue([codeInEditor].join('\n'));
+    };
+
+    // 这是点击保存代码的函数
+    function fileSaving() {
+      var editorCentent = editor.getValue();
+      console.log(editorCentent);
+
+      // 保存代码
+      var fs = require('fs');
+      try { fs.writeFileSync(filePath, editorCentent, 'utf-8'); }
+      catch (e) { alert('Failed to save the file !'); };
+
+      // 打印存储位置
+      console.log("这是后面打印的filePath：" + filePath);
+    };
+
+    // 这是点击 codeBar 按钮的函数，切换显示和隐藏
+    function codeBar() {
+      if ($$("codeBar").isVisible()) {
+        $$("codeBar").hide();
+      } else {
+        $$("codeBar").show();
+      };
+    };
+
+    // 从脚手架拖放代码块并更新
+    // 关于如何插入一段代码，这个工单里面有讨论： https://github.com/Microsoft/monaco-editor/issues/192
+    // 思路：获取当前文本内容；获取当前行；切割文本，插入拖放的代码文本；设置文本editor.setValue()；
+    // 关于插入文档 https://github.com/Microsoft/monaco-editor/issues/584
+
+    webix.DragControl.addDrop("container", {
+      $drop: function (source, target, event) {
+        var dnd = webix.DragControl.getContext();
+        target.value = dnd.from.getItem(dnd.source[0]).code;
+        // 插入代码到当前光标位置
+        var p = editor.getPosition();
+        editor.executeEdits("",
+          [
+            {
+              range: new monaco.Range(
+                p.lineNumber,
+                p.column,
+                p.lineNumber,
+                p.column),
+              text: target.value + "\n"
+            }
+          ]
+        );
+      }
+    })
+
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,372 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+  <!-- 引入xterm.js -->
+  <link rel="stylesheet" href="node_modules/xterm/dist/xterm.css" type="text/css">
+  <script src="node_modules/xterm/dist/xterm.js"></script>
+  <script src="node_modules/xterm/dist/addons/fit/fit.js"></script>
+
+  <link rel="stylesheet" href="webix/webix.css" type="text/css">
+  <!-- <link rel="stylesheet" href="webix/skins/contrast.css" type="text/css"> -->
+  <script src="webix/webix.js" type="text/javascript"></script>
+  <link rel="stylesheet" href="webix/custom.css" type="text/css">
+
+  <script>
+    // Monaco插件需要一种特别的Require 
+    // Monaco uses a custom amd loader that overrides node's require.
+    // Keep a reference to node's require so we can restore it after executing the amd loader file.
+    var nodeRequire = global.require;
+  </script>
+  <script src="webix/monaco/min/vs/loader.js"></script>
+  <script>
+    // Save Monaco's amd require and restore Node's require
+    var amdRequire = global.require;
+    global.require = nodeRequire;
+  </script>
+</head>
+
+<body>
+
+  <!-- 这是打开和新建文件用的隐藏 Input 标签 -->
+  <input type="file" id="input" onchange="fileInputing(this.files)" style="display:none">
+
+  <script type="text/javascript" charset="utf-8">
+
+    // 软件本身的菜单加载以及与main.js通过ipcRenderer通讯
+    // 部分代码参考了这篇Electron创建文本编辑器的教程
+    // https://www.jianshu.com/p/57d910008612
+
+    // 全局声明编辑器的对象，以便各个子函数中可以被引用
+    var editor = {};
+
+    // 定义文件新建、打开、保存相关的全局变量
+    var fs = require('fs');
+    var filePath = "";
+    var fileSaved = true;
+    document.title = "String IDE";
+
+    // 命令行加载
+    // 需要node-pty的配合才能使用，安装时遇到了这个坑 http://blog.freedomlang.com/1189.html
+    var os = require('os');
+    var pty = require('node-pty');
+    var Terminal = require('xterm').Terminal;
+
+    // Initialize node-pty with an appropriate shell
+    const shell = process.env[os.platform() === 'win32' ? 'COMSPEC' : 'SHELL'];
+    const ptyProcess = pty.spawn(shell, [], {
+      name: 'xterm-color',
+      cols: 80,
+      rows: 30,
+      cwd: process.cwd(),
+      env: process.env
+    });
+
+    // Initialize xterm.js and attach it to the DOM
+    const xterm = new Terminal({
+      // fontSize: 13,
+      // fontFamily: 'courier',
+      // lineHeight: 1,
+    });
+
+    // 编辑器需要预先加载的内容
+    // require node modules before loader.js comes in
+    // codeInEditor = codeInEditor + "good ";
+    var path = require('path');
+    function uriFromPath(_path) {
+      var pathName = path.resolve(_path).replace(/\\/g, '/');
+      if (pathName.length > 0 && pathName.charAt(0) !== '/') {
+        pathName = '/' + pathName;
+      }
+      return encodeURI('file://' + pathName);
+    }
+    amdRequire.config({
+      baseUrl: uriFromPath(path.join(__dirname, 'webix/monaco/min'))
+    });
+    // workaround monaco-css not understanding the environment
+    self.module = undefined;
+    // workaround monaco-typescript not understanding the environment
+    self.process.browser = true;
+    // 代码编辑器初始化并渲染
+    amdRequire(['vs/editor/editor.main'], function () {
+      editor = monaco.editor.create(document.getElementById('container'), {
+        value: [
+          "",
+        ].join('\n'),
+        scrollBeyondLastLine: false,
+        automaticLayout: true,
+        theme: "vs-dark",
+        language: 'javascript',
+        fontSize: 13,
+        fontFamily: "Menlo"
+      });
+    });
+
+    // 读取代码脚手架的配置文件
+    var codelibtext = fs.readFileSync('codeLib.json');
+    console.log(codelibtext);
+    var codelib = JSON.parse(codelibtext);
+    console.log("codelib: " + codelib);
+
+    // 这个是用Webix声明的界面布局
+    webix.ui({
+      view: "layout",
+      responsive: true,
+      border: 1,
+      rows: [
+        {
+          view: "toolbar", height: 30, elements: [
+            // { view: "icon", id: "fileCreateBTN", click: "fileCreating()", icon: "file" },
+            { view: "icon", id: "fileOpenBTN", click: "fileLoading()", icon: "folder-open" },
+            { view: "icon", id: "fileSaveBTN", click: "fileSaving()", icon: "save" },
+            { view: "template", id: "filePath", template: filePath, minWidth: 300, type: "clean" },
+            { gravity: 2 },
+            // { view: "icon", id: "dbHelper", click: "dbHelper()", icon: "database" },
+            { view: "icon", id: "terminalBTN", click: "terminal()", icon: "terminal" },
+            { view: "icon", id: "codeBarBTN", click: "codeBar()", icon: "flask" },
+          ]
+        },
+        {
+          width: 0, // 0表示自适应宽度
+          cols: [
+            { view: "template", template: "<div id=\"container\" onchange=\"needSave()\" style=\"width:100%;height:100%;margin:0;padding:0\"></div>", css: "no_paddingNDmargin" },
+            {
+              view: "tree",
+              id: "codeBar",
+              multiselect: true,
+              select: true,
+              type: "lineTree",
+              drag: true,
+              width: 240,
+              hidden: true,
+              autoheight: true,
+              data: codelib
+              // [
+              //   { id: "", value: "// gopl.io/ch1/helloworld", code: "coding...\n\tyes\n\t\t{\t\nno" },
+              //   { id: "", value: "package main", code: "package main" },
+              //   { id: "import", value: 'import "fmt"', code: "import \"fmt\"" },
+              //   {
+              //     id: "func", value: "func main() {", open: true,
+              //     data: [
+              //       { id: "fmt", value: 'fmt.Println("Hello, 世界")', code: "fmt.Println(\"Hello, 世界\")" },
+              //     ]
+              //   },
+              //   { id: "endfunc", value: '} //end func', code: "coding...\n\tyes\n\t\t{\t\nno" },
+              // ]
+            }
+          ]
+        },
+        {
+          id: "terminalResizer",
+          view: "resizer",
+          height: 2,
+          hidden: true
+        },
+        {
+          id: "terminal",
+          view: "template",
+          //css: "",
+          height: 400,
+          width: 0,
+          template: "<div id=\"terminalPan\" style=\"height:100%;width:100%\"></div>",
+          hidden: true
+        }
+      ]
+
+    });
+
+    // 这个是隐藏Input标签的相应JS对象
+    var inputElement = document.getElementById("input");
+    // inputElement.addEventListener("change", fileInputing(), false);
+
+    // 新建文件函数，使用FileSaver.js库
+    function fileCreating() {
+      // 引入FileSaver库，从编辑器里面存储
+      // var FileSaver = require('file-saver');
+      // var blob = new Blob([editor.getValue()], { type: "text/plain;charset=utf-8" });
+      // FileSaver.saveAs(blob, "新建文件.txt");
+      // console.log(FileSaver);
+      // 设置当前文件路径（全局）并更新到显示位置
+      // filePath = file.path;
+      // $$("filePath").setHTML(filePath);
+    };
+
+    // 处理打开的文件从中读取出文本信息并传递给编辑器更新函数
+    function fileInputing(f) {
+      var file = f.item(0);
+      filePath = file.path;
+      console.log(filePath);
+      // 覆盖存储，还是正常打开文件
+      if (isCoveringFile === true) {
+        if (filePath !== "") {
+          fileSaving();
+          // 设置当前文件路径（全局）并更新到显示位置
+          document.title = "String - " + filePath;
+          $$("filePath").setHTML(filePath);
+          switchLanguage();
+        }
+      } else {
+        var reader = new FileReader();
+        reader.onload = function () {
+          // 生成（初始化）编辑器，并且将读取到的文本内容注入到编辑器的Set方法
+          fileOpening(reader.result);
+        }
+        reader.readAsText(file);
+        // 设置当前文件路径（全局）并更新到显示位置
+        document.title = "String - " + filePath;
+        $$("filePath").setHTML(filePath);
+        switchLanguage();
+      };
+      isCoveringFile = false;
+    };
+
+    // 这是点击打开按钮时的触发函数
+    function fileLoading() {
+      inputElement.click();
+    };
+
+    // 将代码载入Monaco编辑器，更新编辑器内容
+    function fileOpening(codeInEditor) {
+      // 更新编辑器内容
+      editor.setValue([codeInEditor].join('\n'));
+    };
+
+    // 当前代码编辑器发生变化的监听函数
+
+
+    // 标记当前文件需要保存的函数
+    function needSave() {
+      if (filePath !== "") {
+        $$("filePath").setHTML(filePath + " *");
+        document.title = "String - " + filePath + " *";
+      } else {
+        $$("filePath").setHTML("未保存。点击保存按钮选择文件将进行覆盖保存。");
+        document.title = "String IDE" + " *";
+      };
+    };
+
+    // 这是点击保存代码的函数，覆盖存储默认为 false
+    var isCoveringFile = false;
+    function fileSaving() {
+      var editorCentent = editor.getValue();
+      console.log(editorCentent);
+
+      if (filePath !== "") {
+        // 保存代码，使用fs包
+        try { fs.writeFileSync(filePath, editorCentent, 'utf-8'); }
+        catch (e) { alert('存储失败！请检查是否选择了文件'); };
+
+        fileSaved = true;
+        document.title = "String - " + filePath;
+        $$("filePath").setHTML(filePath);
+        // 打印存储位置
+        console.log("这是后面打印的filePath：" + filePath);
+      } else {
+        // 设置正在覆盖存储，并执行覆盖存储
+        // alert("警告：即将覆盖存储。您下一步打开的文件将会被覆盖存储为当前编辑器的内容！如不希望覆盖，请在下一步选择【取消】。");
+        isCoveringFile = true;
+        inputElement.click();
+        console.log("运行了覆盖保存逻辑");
+      };
+    };
+
+    // 这是点击 codeBar 按钮的函数，切换显示和隐藏
+    function codeBar() {
+      if ($$("codeBar").isVisible()) {
+        $$("codeBar").hide();
+      } else {
+        $$("codeBar").show();
+      };
+    };
+
+    // 这是点击 terminal 按钮的函数，切换显示和隐藏
+    var isTerm = false;
+    function terminal() {
+      if ($$("terminal").isVisible()) {
+        $$("terminal").hide();
+        $$("terminalResizer").hide();
+      } else {
+        $$("terminal").show();
+        $$("terminalResizer").show();
+        // 在显示时，必须再次生成终端，否则会不出示
+        xterm.open(document.getElementById('terminalPan'));
+        // 如果是第一次显示，则请求构造终端的函数
+        if (isTerm === false) {
+          setupTerm();
+        };
+      };
+    };
+
+    function setupTerm() {
+      // 创建终端规则，设置isTerm为true（避免二次创建）
+      // Setup communication between xterm.js and node-pty
+      xterm.on('data', (data) => {
+        ptyProcess.write(data);
+      });
+      ptyProcess.on('data', function (data) {
+        xterm.write(data);
+      });
+      isTerm = true;
+    };
+
+    // 这是切换编辑器解析语言的代码
+    // 更多语言支持问题，参考VS Code的这个页面 https://code.visualstudio.com/docs/languages/overview
+    function switchLanguage() {
+      var model = editor.getModel();
+      var lang = filePath.substring(filePath.length - 3, filePath.length);
+      switch (lang) {
+        case ".go":
+          monaco.editor.setModelLanguage(model, "go");
+          break;
+        case ".js":
+          monaco.editor.setModelLanguage(model, "javascript");
+          break;
+        case "son":
+          monaco.editor.setModelLanguage(model, "json");
+          break;
+        case "php":
+          monaco.editor.setModelLanguage(model, "php");
+          break;
+        case ".py":
+          monaco.editor.setModelLanguage(model, "python");
+          break;
+        case "tml":
+          monaco.editor.setModelLanguage(model, "html");
+          break;
+        case ".md":
+          monaco.editor.setModelLanguage(model, "markdown");
+          break;
+        default:
+          monaco.editor.setModelLanguage(model, "plaintext");
+      };
+    };
+
+    // 从脚手架拖放代码块并更新
+    // 关于如何插入一段代码，这个工单里面有讨论： https://github.com/Microsoft/monaco-editor/issues/192
+    // 思路：获取当前文本内容；获取当前行；切割文本，插入拖放的代码文本；设置文本editor.setValue()；
+    // 关于插入文档 https://github.com/Microsoft/monaco-editor/issues/584
+    webix.DragControl.addDrop("container", {
+      $drop: function (source, target, event) {
+        var dnd = webix.DragControl.getContext();
+        target.value = dnd.from.getItem(dnd.source[0]).code;
+        // 插入代码到当前光标位置
+        var p = editor.getPosition();
+        editor.executeEdits("",
+          [
+            {
+              range: new monaco.Range(
+                p.lineNumber,
+                p.column,
+                p.lineNumber,
+                p.column),
+              text: target.value + "\n"
+            }
+          ]
+        );
+      }
+    });
+
+  </script>
+</body>
+
+</html>
