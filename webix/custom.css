@@ -45,3 +45,10 @@ body,html{
   font-feature-settings: "liga" 0;
   position: relative;
 }
+
+.webix_icon_button .webix_icon {
+  color: #ddd;
+}
+.webix_icon_btn {
+  color: #ddd;
+}

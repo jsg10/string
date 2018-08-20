@@ -8,6 +8,7 @@
 [Webix](https://webix.com/)  
 [Monaco editor](https://microsoft.github.io/monaco-editor/)  
 [xterm.js](https://xtermjs.org/)  
+[electron-packager](https://github.com/electron-userland/electron-packager)  
 
 
 ### 0.1.1版本开发目标

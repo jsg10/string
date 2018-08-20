@@ -1,13 +1,14 @@
 {
-  "name": "songeditor",
-  "version": "1.0.0",
-  "description": "Filemaker Script Work Place like IDE for Coder",
+  "name": "string",
+  "version": "0.1.0a",
+  "description": "Minimal Code Editor with a custom helper",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Json Song",
+  "productName": "String",
   "license": "ISC",
   "devDependencies": {
     "electron": "^2.0.7"

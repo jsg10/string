@@ -103,10 +103,10 @@
     });
 
     // 读取代码脚手架的配置文件
-    var codelibtext = fs.readFileSync('codeLib.json');
-    console.log(codelibtext);
-    var codelib = JSON.parse(codelibtext);
-    console.log("codelib: " + codelib);
+    // var codelibtext = fs.readFileSync('codeLib.json');
+    // console.log(codelibtext);
+    // var codelib = JSON.parse(codelibtext);
+    // console.log("codelib: " + codelib);
 
     // 这个是用Webix声明的界面布局
     webix.ui({
@@ -119,11 +119,12 @@
             // { view: "icon", id: "fileCreateBTN", click: "fileCreating()", icon: "file" },
             { view: "icon", id: "fileOpenBTN", click: "fileLoading()", icon: "folder-open" },
             { view: "icon", id: "fileSaveBTN", click: "fileSaving()", icon: "save" },
+            { view: "icon", id: "terminalBTN", click: "terminal()", icon: "terminal" },
             { view: "template", id: "filePath", template: filePath, minWidth: 300, type: "clean" },
             { gravity: 2 },
             // { view: "icon", id: "dbHelper", click: "dbHelper()", icon: "database" },
-            { view: "icon", id: "terminalBTN", click: "terminal()", icon: "terminal" },
-            { view: "icon", id: "codeBarBTN", click: "codeBar()", icon: "flask" },
+
+            { view: "icon", id: "codeBarBTN", click: "codeBar()", icon: "book" },
           ]
         },
         {
@@ -131,29 +132,82 @@
           cols: [
             { view: "template", template: "<div id=\"container\" onchange=\"needSave()\" style=\"width:100%;height:100%;margin:0;padding:0\"></div>", css: "no_paddingNDmargin" },
             {
-              view: "tree",
+              view: "layout",
               id: "codeBar",
-              multiselect: true,
-              select: true,
-              type: "lineTree",
-              drag: true,
               width: 240,
               hidden: true,
               autoheight: true,
-              data: codelib
-              // [
-              //   { id: "", value: "// gopl.io/ch1/helloworld", code: "coding...\n\tyes\n\t\t{\t\nno" },
-              //   { id: "", value: "package main", code: "package main" },
-              //   { id: "import", value: 'import "fmt"', code: "import \"fmt\"" },
-              //   {
-              //     id: "func", value: "func main() {", open: true,
-              //     data: [
-              //       { id: "fmt", value: 'fmt.Println("Hello, 世界")', code: "fmt.Println(\"Hello, 世界\")" },
-              //     ]
-              //   },
-              //   { id: "endfunc", value: '} //end func', code: "coding...\n\tyes\n\t\t{\t\nno" },
-              // ]
-            }
+              rows: [
+                {
+                  view: "tree",
+                  multiselect: true,
+                  select: true,
+                  type: "lineTree",
+                  drag: true,
+                  // width: 240,
+                  // hidden: true,
+                  autoheight: true,
+                  data: [
+                    { "value": "单行注释", "code": "\/\/ 注释内容" },
+                    { "value": "多行注释", "code": "\/\/ 注释内容1\n\/\/ 注释内容2\n\/\/ 注释内容3" },
+                    {
+                      "value": "GO程序骨架", "open": true, "code": "\/\/ /包相对路径/hello \npackage main\nimport \"fmt\"\n\nfunc main() {\n\tfmt.Println(\"Hello, 世界\")\n}",
+                      "data": [
+                        { "value": "包声明：package", "code": "package main" },
+                        { "value": "引入包：import", "code": "import (\n\t\"fmt\"\n\t\"os\"\n)" },
+                        { "value": "函数声明：func", "code": "\/\/ 这是main函数的注释\nfunc main() {\n\tvar s, sep string\n\tfor i := 1; i < len(os.Args); i++ {\n\t\ts += sep + os.Args[i]\n\t\tsep = \" \"\n\t}\n\tfmt.Println(s)\n}" }
+                      ]
+                    },
+                    {
+                      "value": "GO语言关键字", "open": false, "code": "\/\/ break      default       func     interface   select\ncase       defer         go       map         struct\nchan       else          goto     package     switch\nconst      fallthrough   if       range       type\ncontinue   for           import   return      var",
+
+                      "data": [
+
+                        { "value": "const", "code": "" },
+                        { "value": "var", "code": "" },
+                        { "value": "struct", "code": "" },
+                        { "value": "interface", "code": "" },
+                        { "value": "map", "code": "" },
+
+                        { "value": "package", "code": "" },
+                        { "value": "import", "code": "" },
+                        { "value": "func", "code": "" },
+
+                        { "value": "if", "code": "" },
+                        { "value": "else", "code": "" },
+                        { "value": "for", "code": "" },
+                        { "value": "switch", "code": "" },
+                        { "value": "return", "code": "" },
+                        { "value": "break", "code": "" },
+
+                        { "value": "chan", "code": "" },
+                        { "value": "select", "code": "" },
+                        { "value": "default", "code": "" },
+                        { "value": "go", "code": "" },
+                        { "value": "fallthrough", "code": "" },
+                        { "value": "goto", "code": "" },
+                        { "value": "defer", "code": "" },
+                        { "value": "case", "code": "" },
+                        { "value": "continue", "code": "" },
+                        { "value": "type", "code": "" },
+                        { "value": "range", "code": "" }
+                      ]
+                    },
+                    { "value": "GO语言圣经", "code": "\/\/ 更多内容请参考：\n\/\/ https://wizardforcel.gitbooks.io/gopl-zh/content/index.html" }
+                  ]
+                }
+                ,
+                {
+                  view: "toolbar", height: 30, elements: [
+                    { gravity: 2 },
+                    { view: "icon", id: "codeBarBTN", click: "codeBar()", icon: "edit" },
+                  ]
+                }
+                ,
+              ]
+            },
+
+
           ]
         },
         {
@@ -282,19 +336,25 @@
     // 这是点击 terminal 按钮的函数，切换显示和隐藏
     var isTerm = false;
     function terminal() {
-      if ($$("terminal").isVisible()) {
-        $$("terminal").hide();
-        $$("terminalResizer").hide();
-      } else {
-        $$("terminal").show();
-        $$("terminalResizer").show();
-        // 在显示时，必须再次生成终端，否则会不出示
-        // xterm.open(document.getElementById('terminalPan'));
-        // 如果是第一次显示，则请求构造终端的函数
-        if (isTerm === false) {
-          // setupTerm();
-        };
-      };
+      // if ($$("terminal").isVisible()) {
+      //   $$("terminal").hide();
+      //   $$("terminalResizer").hide();
+      // } else {
+      //   $$("terminal").show();
+      //   $$("terminalResizer").show();
+      //   // 在显示时，必须再次生成终端，否则会不出示
+      //   // xterm.open(document.getElementById('terminalPan'));
+      //   // 如果是第一次显示，则请求构造终端的函数
+      //   if (isTerm === false) {
+      //     // setupTerm();
+      //   };
+      // };
+
+      const { app } = require('electron').remote;
+      const atPath = app.getPath('desktop');
+      const { spawn } = require('child_process');
+      let openTerminalAtPath = spawn('open', ['-a', 'Terminal', atPath]);
+      openTerminalAtPath.on('error', (err) => { console.log(err); });
     };
 
     // function setupTerm() {
