@@ -29,7 +29,7 @@
 <body>
 
   <!-- 这是打开和新建文件用的隐藏 Input 标签 -->
-  <input type="file" id="input" onchange="fileInputing(this.files)" style="display:none">
+  <input type="file" id="input" onchange="fileChanging(this.files)" style="display:none">
 
   <script type="text/javascript" charset="utf-8">
 
@@ -38,17 +38,17 @@
     // https://www.jianshu.com/p/57d910008612
 
     // 全局声明编辑器的对象，以便各个子函数中可以被引用
-    var editor = {};
+    let editor = {};
 
     // 定义文件新建、打开、保存相关的全局变量
-    var fs = require('fs');
-    var filePath = "";
-    var fileSaved = true;
+    let fs = require('fs');
+    let filePath = "";
+    let fileSaved = true;
     document.title = "String IDE";
 
     // 命令行加载
     // 需要node-pty的配合才能使用，安装时遇到了这个坑 http://blog.freedomlang.com/1189.html
-    var os = require('os');
+    let os = require('os');
     // var pty = require('node-pty');
     // var Terminal = require('xterm').Terminal;
 
@@ -231,7 +231,7 @@
 
     // 这个是隐藏Input标签的相应JS对象
     var inputElement = document.getElementById("input");
-    // inputElement.addEventListener("change", fileInputing(), false);
+    // inputElement.addEventListener("change", fileChanging(), false);
 
     // 新建文件函数，使用FileSaver.js库
     function fileCreating() {
@@ -246,12 +246,12 @@
     };
 
     // 处理打开的文件从中读取出文本信息并传递给编辑器更新函数
-    function fileInputing(f) {
+    function fileChanging(f) {
       var file = f.item(0);
       filePath = file.path;
       console.log(filePath);
       // 覆盖存储，还是正常打开文件
-      if (isCoveringFile === true) {
+      if (newFileNeedSave === true) {
         if (filePath !== "") {
           fileSaving();
           // 设置当前文件路径（全局）并更新到显示位置
@@ -271,12 +271,13 @@
         $$("filePath").setHTML(filePath);
         switchLanguage();
       };
-      isCoveringFile = false;
+      newFileNeedSave = false;
     };
 
     // 这是点击打开按钮时的触发函数
     function fileLoading() {
       inputElement.click();
+      console.log("执行了 fileLoading() 函数");
     };
 
     // 将代码载入Monaco编辑器，更新编辑器内容
@@ -296,14 +297,16 @@
       } else {
         $$("filePath").setHTML("未保存。点击保存按钮选择文件将进行覆盖保存。");
         document.title = "String IDE" + " *";
+        newFileNeedSave = true;
       };
     };
 
     // 这是点击保存代码的函数，覆盖存储默认为 false
-    var isCoveringFile = false;
+    var newFileNeedSave = false;
     function fileSaving() {
       var editorCentent = editor.getValue();
-      console.log(editorCentent);
+      console.log("执行了 fileSaving() 函数");
+      // console.log(editorCentent);
 
       if (filePath !== "") {
         // 保存代码，使用fs包
@@ -315,10 +318,9 @@
         $$("filePath").setHTML(filePath);
         // 打印存储位置
         console.log("这是后面打印的filePath：" + filePath);
-      } else {
+      } else if (newFileNeedSave === true) {
         // 设置正在覆盖存储，并执行覆盖存储
         // alert("警告：即将覆盖存储。您下一步打开的文件将会被覆盖存储为当前编辑器的内容！如不希望覆盖，请在下一步选择【取消】。");
-        isCoveringFile = true;
         inputElement.click();
         console.log("运行了覆盖保存逻辑");
       };
@@ -424,6 +426,27 @@
           ]
         );
       }
+    });
+
+    // 菜单和快捷键
+    // 打开IPC Render进程
+    const { ipcRenderer } = require('electron');
+    ipcRenderer.on('excuteCom', function (event, arg) {
+      console.log("前端IPC收到了信号" + arg);
+      switch (arg) {
+        case "open":
+          fileLoading();
+          console.log("Switch函数收到了信号" + arg);
+          break;
+        case "save":
+          if (filePath !== "") {
+            fileSaving();
+          };
+          console.log("Switch函数收到了信号" + arg);
+          break;
+        default:
+          console.log("no name");
+      };
     });
 
   </script>
