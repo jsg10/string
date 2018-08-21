@@ -8,7 +8,7 @@ const ipc = require('electron').ipcMain;
 let win;
 function createWindow() {
 
-    win = new BrowserWindow({ width: 720, height: 640, backgroundColor: '#191919', title: "String" });
+    win = new BrowserWindow({ width: 720, height: 640, backgroundColor: '#191919', title: "String" /* , titleBarStyle: 'hidden' */});
     win.loadFile('index.html');
 
     // 在创建窗口时，先定义菜单；

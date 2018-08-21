@@ -30,7 +30,7 @@
 
   <!-- 这是打开和新建文件用的隐藏 Input 标签 -->
   <input type="file" id="input" onchange="fileChanging(this.files)" style="display:none">
-
+  <!-- <div style="-webkit-app-region: drag !important;height: 24px;width: 100%;"></div> -->
   <script type="text/javascript" charset="utf-8">
 
     // 软件本身的菜单加载以及与main.js通过ipcRenderer通讯
@@ -69,6 +69,46 @@
       // lineHeight: 1,
     });
 
+    // 从remote对象中引入主进程的app对象
+    // 获取用户配置的存储位置，生成 ~/stringide/stringCodeHelper.json
+    const app = require('electron').remote.app;
+    const stringCodeHelperPath = app.getPath('appData') + "/string/stringCodeHelper.json";
+    console.log(stringCodeHelperPath);
+
+    // 定义配置文件（如果不存在），读取代码脚手架的配置文件（如果存在）
+    // var codelibtext = fs.readFileSync('codeLib.json');
+    // console.log(codelibtext);
+    // var codelib = JSON.parse(codelibtext);
+    // console.log("codelib: " + codelib);
+    let stringCodeHelperDef = [];
+    stringCodeHelperDef = [
+      { id:"1", value: "单行注释", code: "\/\/ 注释内容" },
+      { id:"2", value: "多行注释", code: "\/\/ 注释内容1\n\/\/ 注释内容2\n\/\/ 注释内容3" },
+      {
+        id:"3", value: "GO程序骨架", code: "",
+        data: [
+          { id:"5", value: "包声明：package", code: "package main" },
+          { id:"6", value: "引入包：import", code: "" },
+          { id:"7", value: "函数声明：func", code: "" },
+        ], open: true
+      },
+      { id:"4", value: "GO语言圣经", code: "\/\/ 更多内容请参考：\n\/\/ https://wizardforcel.gitbooks.io/gopl-zh/content/index.html" }
+    ];
+    var stringCodeHelper = require('fs');
+    stringCodeHelper.stat(stringCodeHelperPath, function (err, stat) {
+      if (stat && stat.isFile()) {
+        console.log('配置文件已存在');
+        // stringCodeHelperDef = JSON.parse(stringCodeHelper.readFileSync(stringCodeHelperPath));
+      } else {
+        console.log('配置文件不存在或不是标准文件');
+        // 保存代码，使用fs包
+        try { stringCodeHelper.writeFileSync(stringCodeHelperPath, JSON.stringify(stringCodeHelperDef), 'utf-8'); }
+        catch (e) { alert('配置文件存储失败！无法生成配置文件。'); };
+        console.log(JSON.stringify(stringCodeHelperDef));
+      };
+      console.log(stringCodeHelperDef);
+    });
+
     // 编辑器需要预先加载的内容
     // require node modules before loader.js comes in
     // codeInEditor = codeInEditor + "good ";
@@ -102,20 +142,16 @@
       });
     });
 
-    // 读取代码脚手架的配置文件
-    // var codelibtext = fs.readFileSync('codeLib.json');
-    // console.log(codelibtext);
-    // var codelib = JSON.parse(codelibtext);
-    // console.log("codelib: " + codelib);
-
     // 这个是用Webix声明的界面布局
+    // toolbar, stringEditor, helperEditor, terminal
     webix.ui({
       view: "layout",
       responsive: true,
       border: 1,
       rows: [
+        // toolbar
         {
-          view: "toolbar", height: 30, elements: [
+          id: "toolbar", view: "toolbar", height: 30, elements: [
             // { view: "icon", id: "fileCreateBTN", click: "fileCreating()", icon: "file" },
             { view: "icon", id: "fileOpenBTN", click: "fileLoading()", icon: "folder-open" },
             { view: "icon", id: "fileSaveBTN", click: "fileSaving()", icon: "save" },
@@ -127,10 +163,16 @@
             { view: "icon", id: "codeBarBTN", click: "codeBar()", icon: "book" },
           ]
         },
+
+        // stringEditor
         {
+          id: "stringEditor",
           width: 0, // 0表示自适应宽度
+          hidden: false,
           cols: [
-            { view: "template", template: "<div id=\"container\" onchange=\"needSave()\" style=\"width:100%;height:100%;margin:0;padding:0\"></div>", css: "no_paddingNDmargin" },
+            {
+              view: "template", template: "<div id=\"container\" onchange=\"needSave()\" style=\"width:100%;height:100%;margin:0;padding:0\"></div>", css: "no_paddingNDmargin"
+            },
             {
               view: "layout",
               id: "codeBar",
@@ -139,77 +181,128 @@
               autoheight: true,
               rows: [
                 {
+                  id: "helperTree",
                   view: "tree",
+                  type: "lineTree",
                   multiselect: true,
                   select: true,
-                  type: "lineTree",
                   drag: true,
-                  // width: 240,
                   // hidden: true,
                   autoheight: true,
-                  data: [
-                    { "value": "单行注释", "code": "\/\/ 注释内容" },
-                    { "value": "多行注释", "code": "\/\/ 注释内容1\n\/\/ 注释内容2\n\/\/ 注释内容3" },
-                    {
-                      "value": "GO程序骨架", "open": true, "code": "\/\/ /包相对路径/hello \npackage main\nimport \"fmt\"\n\nfunc main() {\n\tfmt.Println(\"Hello, 世界\")\n}",
-                      "data": [
-                        { "value": "包声明：package", "code": "package main" },
-                        { "value": "引入包：import", "code": "import (\n\t\"fmt\"\n\t\"os\"\n)" },
-                        { "value": "函数声明：func", "code": "\/\/ 这是main函数的注释\nfunc main() {\n\tvar s, sep string\n\tfor i := 1; i < len(os.Args); i++ {\n\t\ts += sep + os.Args[i]\n\t\tsep = \" \"\n\t}\n\tfmt.Println(s)\n}" }
-                      ]
-                    },
-                    {
-                      "value": "GO语言关键字", "open": false, "code": "\/\/ break      default       func     interface   select\ncase       defer         go       map         struct\nchan       else          goto     package     switch\nconst      fallthrough   if       range       type\ncontinue   for           import   return      var",
+                  width: 240,
+                  data: stringCodeHelperDef
+                  // [
+                  //   { "value": "单行注释", "code": "\/\/ 注释内容" },
+                  //   { "value": "多行注释", "code": "\/\/ 注释内容1\n\/\/ 注释内容2\n\/\/ 注释内容3" },
+                  //   {
+                  //     "value": "GO程序骨架", "open": true, "code": "\/\/ /包相对路径/hello \npackage main\nimport \"fmt\"\n\nfunc main() {\n\tfmt.Println(\"Hello, 世界\")\n}",
+                  //     "data": [
+                  //       { "value": "包声明：package", "code": "package main" },
+                  //       { "value": "引入包：import", "code": "import (\n\t\"fmt\"\n\t\"os\"\n)" },
+                  //       { "value": "函数声明：func", "code": "\/\/ 这是main函数的注释\nfunc main() {\n\tvar s, sep string\n\tfor i := 1; i < len(os.Args); i++ {\n\t\ts += sep + os.Args[i]\n\t\tsep = \" \"\n\t}\n\tfmt.Println(s)\n}" }
+                  //     ]
+                  //   },
+                  //   {
+                  //     "value": "GO语言关键字", "open": false, "code": "\/\/ break      default       func     interface   select\ncase       defer         go       map         struct\nchan       else          goto     package     switch\nconst      fallthrough   if       range       type\ncontinue   for           import   return      var",
 
-                      "data": [
+                  //     "data": [
 
-                        { "value": "const", "code": "" },
-                        { "value": "var", "code": "" },
-                        { "value": "struct", "code": "" },
-                        { "value": "interface", "code": "" },
-                        { "value": "map", "code": "" },
+                  //       { "value": "const", "code": "" },
+                  //       { "value": "var", "code": "" },
+                  //       { "value": "struct", "code": "" },
+                  //       { "value": "interface", "code": "" },
+                  //       { "value": "map", "code": "" },
 
-                        { "value": "package", "code": "" },
-                        { "value": "import", "code": "" },
-                        { "value": "func", "code": "" },
+                  //       { "value": "package", "code": "" },
+                  //       { "value": "import", "code": "" },
+                  //       { "value": "func", "code": "" },
 
-                        { "value": "if", "code": "" },
-                        { "value": "else", "code": "" },
-                        { "value": "for", "code": "" },
-                        { "value": "switch", "code": "" },
-                        { "value": "return", "code": "" },
-                        { "value": "break", "code": "" },
+                  //       { "value": "if", "code": "" },
+                  //       { "value": "else", "code": "" },
+                  //       { "value": "for", "code": "" },
+                  //       { "value": "switch", "code": "" },
+                  //       { "value": "return", "code": "" },
+                  //       { "value": "break", "code": "" },
 
-                        { "value": "chan", "code": "" },
-                        { "value": "select", "code": "" },
-                        { "value": "default", "code": "" },
-                        { "value": "go", "code": "" },
-                        { "value": "fallthrough", "code": "" },
-                        { "value": "goto", "code": "" },
-                        { "value": "defer", "code": "" },
-                        { "value": "case", "code": "" },
-                        { "value": "continue", "code": "" },
-                        { "value": "type", "code": "" },
-                        { "value": "range", "code": "" }
-                      ]
-                    },
-                    { "value": "GO语言圣经", "code": "\/\/ 更多内容请参考：\n\/\/ https://wizardforcel.gitbooks.io/gopl-zh/content/index.html" }
-                  ]
+                  //       { "value": "chan", "code": "" },
+                  //       { "value": "select", "code": "" },
+                  //       { "value": "default", "code": "" },
+                  //       { "value": "go", "code": "" },
+                  //       { "value": "fallthrough", "code": "" },
+                  //       { "value": "goto", "code": "" },
+                  //       { "value": "defer", "code": "" },
+                  //       { "value": "case", "code": "" },
+                  //       { "value": "continue", "code": "" },
+                  //       { "value": "type", "code": "" },
+                  //       { "value": "range", "code": "" }
+                  //     ]
+                  //   },
+                  //   { "value": "GO语言圣经", "code": "\/\/ 更多内容请参考：\n\/\/ https://wizardforcel.gitbooks.io/gopl-zh/content/index.html" }
+                  // ]
                 }
                 ,
                 {
                   view: "toolbar", height: 30, elements: [
+                    // { view: "icon", id: "newHelper", click: "codeBar()", icon: "plus-circle" },
                     { gravity: 2 },
-                    { view: "icon", id: "codeBarBTN", click: "codeBar()", icon: "edit" },
+                    { view: "icon", id: "switchEditorBTN", click: "switchEditor()", icon: "edit" },
                   ]
                 }
                 ,
               ]
             },
-
-
           ]
-        },
+        }
+        ,
+        // helperEditor
+        {
+          id: "helperEditor",
+          width: 0, // 0表示自适应宽度
+          hidden: true,
+          view: "layout",
+          // autoheight: true,
+          rows: [
+            {
+              // id: "helperTreetable",
+              view: "treetable",
+              // type: "lineTree",
+              multiselect: true,
+              select: true,
+              drag: true,
+              width: 0,
+              // autoheight: true,
+              // autowidth: true,
+              scroll: true,
+              spans: true,
+              columns: [
+                {
+                  id: "value",
+                  header: "块名称",
+                  template: "{common.treetable()} #value#",
+                  width: 200
+                },
+                {
+                  id: "code",
+                  header: "代码块儿",
+                  width: 400
+                }
+              ],
+              data: stringCodeHelperDef
+            }
+            ,
+            {
+              view: "toolbar", width: 0, height: 30, elements: [
+                { view: "icon", id: "newHelper", click: "", icon: "plus-circle" },
+                { gravity: 2 },
+                { view: "icon", id: "switchEditorBTN", click: "switchEditor()", icon: "edit" },
+              ]
+            }
+            ,
+          ]
+
+        }
+        ,
+        // terminal
         {
           id: "terminalResizer",
           view: "resizer",
@@ -258,6 +351,7 @@
           document.title = "String - " + filePath;
           $$("filePath").setHTML(filePath);
           switchLanguage();
+          newFileNeedSave = false;
         }
       } else {
         var reader = new FileReader();
@@ -271,7 +365,6 @@
         $$("filePath").setHTML(filePath);
         switchLanguage();
       };
-      newFileNeedSave = false;
     };
 
     // 这是点击打开按钮时的触发函数
@@ -332,6 +425,19 @@
         $$("codeBar").hide();
       } else {
         $$("codeBar").show();
+      };
+    };
+
+    // 点击 switchEditor 按钮的函数
+    function switchEditor() {
+      if ($$("stringEditor").isVisible()) {
+        $$("stringEditor").hide();
+        $$("toolbar").hide();
+        $$("helperEditor").show();
+      } else {
+        $$("stringEditor").show();
+        $$("toolbar").show();
+        $$("helperEditor").hide();
       };
     };
 
