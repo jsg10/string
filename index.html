@@ -141,6 +141,10 @@
         language: 'javascript',
         fontSize: 13,
         fontFamily: "Menlo",
+
+        // 对于Format代码很重要，需要打开
+        formatOnType: true,
+
         // 文本自动Wrap
         wordWrap: 'wordWrapColumn',
         wordWrapColumn: 78,
@@ -182,6 +186,7 @@
                   { view: "icon", id: "fileSaveBTN", click: "fileSaving()", icon: "save" },
                   { view: "template", id: "filePath", template: filePath, width: 0, minWidth: 500, type: "clean" },
                   { gravity: 2 },
+                  { view: "icon", id: "formatBTN", click: "editorFormat()", icon: "indent" },
                   { view: "icon", id: "terminalBTN", click: "terminal()", icon: "terminal" },
                   { view: "icon", id: "zenBTN", click: "zenLayout()", icon: "desktop" },
                   // { view: "icon", id: "dbHelper", click: "dbHelper()", icon: "database" },
@@ -410,6 +415,14 @@
       document.title = "String - " + filePath;
       $$("filePath").setHTML(filePath);
       switchLanguage();
+      // 清空隐藏的打开文件标签的值，以便确保再次点击打开时可以读取之前加载的文件
+      inputElement.value = "";
+      // editorFormat();
+    };
+
+    function editorFormat() {
+      // 执行自动的格式化，Formatter
+      editor.getAction('editor.action.formatDocument').run();
     };
 
     // // 新建文件函数，使用FileSaver.js库
@@ -651,7 +664,7 @@
                 p.column,
                 p.lineNumber,
                 p.column),
-              text: target.value + "\n"
+              text: target.value /* + "\n" */
             }
           ]
         );
