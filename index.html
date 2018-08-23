@@ -76,32 +76,30 @@
     console.log(stringCodeHelperPath);
 
     // 定义配置文件（如果不存在），读取代码脚手架的配置文件（如果存在）
-    // var codelibtext = fs.readFileSync('codeLib.json');
-    // console.log(codelibtext);
-    // var codelib = JSON.parse(codelibtext);
-    // console.log("codelib: " + codelib);
-    let stringCodeHelperDef = [];
-    stringCodeHelperDef = [
-      { id:"1", value: "单行注释", code: "\/\/ 注释内容" },
-      { id:"2", value: "多行注释", code: "\/\/ 注释内容1\n\/\/ 注释内容2\n\/\/ 注释内容3" },
-      {
-        id:"3", value: "GO程序骨架", code: "",
-        data: [
-          { id:"5", value: "包声明：package", code: "package main" },
-          { id:"6", value: "引入包：import", code: "" },
-          { id:"7", value: "函数声明：func", code: "" },
-        ], open: true
-      },
-      { id:"4", value: "GO语言圣经", code: "\/\/ 更多内容请参考：\n\/\/ https://wizardforcel.gitbooks.io/gopl-zh/content/index.html" }
+    let stringCodeHelperDef = [
     ];
+    console.log('这个数组的初始值：', stringCodeHelperDef);
     var stringCodeHelper = require('fs');
     stringCodeHelper.stat(stringCodeHelperPath, function (err, stat) {
       if (stat && stat.isFile()) {
         console.log('配置文件已存在');
-        // stringCodeHelperDef = JSON.parse(stringCodeHelper.readFileSync(stringCodeHelperPath));
+        stringCodeHelperDef = JSON.parse(stringCodeHelper.readFileSync(stringCodeHelperPath));
       } else {
         console.log('配置文件不存在或不是标准文件');
-        // 保存代码，使用fs包
+        stringCodeHelperDef = [
+          { "value": "单行注释", "code": "// 注释内容" },
+          { "value": "多行注释", "code": "// 注释内容1\n// 注释内容2\n// 注释内容3" },
+          {
+            "value": "GO程序骨架", "code": "", "open": false, data: [
+              { "value": "单行注释", "code": "// 注释内容" },
+              { "value": "多行注释", "code": "// 注释内容1\n// 注释内容2\n// 注释内容3" },
+              { "value": "GO程序骨架", "code": "", "open": true },
+              { "value": "GO语言圣经", "code": "// 更多内容请参考：\n// https://wizardforcel.gitbooks.io/gopl-zh/content/index.html" }
+            ]
+          },
+          { "value": "GO语言圣经", "code": "// 更多内容请参考：\n// https://wizardforcel.gitbooks.io/gopl-zh/content/index.html" }
+        ];
+        // 保存配置文件，使用fs包
         try { stringCodeHelper.writeFileSync(stringCodeHelperPath, JSON.stringify(stringCodeHelperDef), 'utf-8'); }
         catch (e) { alert('配置文件存储失败！无法生成配置文件。'); };
         console.log(JSON.stringify(stringCodeHelperDef));
@@ -146,6 +144,7 @@
     // toolbar, stringEditor, helperEditor, terminal
     webix.ui({
       view: "layout",
+      // width: 800,
       responsive: true,
       border: 1,
       rows: [
@@ -156,7 +155,7 @@
             { view: "icon", id: "fileOpenBTN", click: "fileLoading()", icon: "folder-open" },
             { view: "icon", id: "fileSaveBTN", click: "fileSaving()", icon: "save" },
             { view: "icon", id: "terminalBTN", click: "terminal()", icon: "terminal" },
-            { view: "template", id: "filePath", template: filePath, minWidth: 300, type: "clean" },
+            { view: "template", id: "filePath", template: filePath, width: 0, minWidth: 500, type: "clean" },
             { gravity: 2 },
             // { view: "icon", id: "dbHelper", click: "dbHelper()", icon: "database" },
 
@@ -190,7 +189,8 @@
                   // hidden: true,
                   autoheight: true,
                   width: 240,
-                  data: stringCodeHelperDef
+                  data: stringCodeHelperDef,
+                  datatype: "json",
                   // [
                   //   { "value": "单行注释", "code": "\/\/ 注释内容" },
                   //   { "value": "多行注释", "code": "\/\/ 注释内容1\n\/\/ 注释内容2\n\/\/ 注释内容3" },
@@ -243,9 +243,9 @@
                 ,
                 {
                   view: "toolbar", height: 30, elements: [
-                    // { view: "icon", id: "newHelper", click: "codeBar()", icon: "plus-circle" },
+                    { view: "icon", id: "helperReload", click: "helperReload()", icon: "retweet" },
                     { gravity: 2 },
-                    { view: "icon", id: "switchEditorBTN", click: "switchEditor()", icon: "edit" },
+                    { view: "icon", id: "switchEditorBTN", click: "openHelperJSON()", icon: "edit" },
                   ]
                 }
                 ,
@@ -262,39 +262,53 @@
           view: "layout",
           // autoheight: true,
           rows: [
-            {
-              // id: "helperTreetable",
-              view: "treetable",
-              // type: "lineTree",
-              multiselect: true,
-              select: true,
-              drag: true,
-              width: 0,
-              // autoheight: true,
-              // autowidth: true,
-              scroll: true,
-              spans: true,
-              columns: [
-                {
-                  id: "value",
-                  header: "块名称",
-                  template: "{common.treetable()} #value#",
-                  width: 200
-                },
-                {
-                  id: "code",
-                  header: "代码块儿",
-                  width: 400
-                }
-              ],
-              data: stringCodeHelperDef
-            }
-            ,
+            // {
+            //   id: "helperTreetable",
+            //   view: "treetable",
+            //   // type: "lineTree",
+            //   multiselect: true,
+            //   select: true,
+            //   drag: true,
+            //   width: 0,
+            //   height: 0,
+            //   // autoheight: true,
+            //   // autowidth: true,
+            //   // scheme: {
+            //   //   $group: "year"
+            //   // },
+            //   scroll: true,
+            //   spans: true,
+            //   columns: [
+            //     {
+            //       id: "id",
+            //       header: "目录",
+            //       template: "{common.treetable()}",
+            //       width: 80,
+            //     },
+            //     {
+            //       id: "value",
+            //       header: "块名称",
+            //       editor: "text",
+            //       // template: "{common.treetable()} #value#",
+            //       width: 200,
+            //     },
+            //     {
+            //       id: "code",
+            //       header: "代码块儿",
+            //       editor: "text",
+            //       width: 400
+            //     }
+            //   ],
+            //   editable: true,
+            //   data: stringCodeHelperDef,
+            //   datatype: "json",
+            // }
+            // ,
             {
               view: "toolbar", width: 0, height: 30, elements: [
                 { view: "icon", id: "newHelper", click: "", icon: "plus-circle" },
                 { gravity: 2 },
-                { view: "icon", id: "switchEditorBTN", click: "switchEditor()", icon: "edit" },
+                { view: "icon", id: "switchEditorBTN", click: "openHelperJSON()", icon: "edit" },
               ]
             }
             ,
@@ -325,6 +339,17 @@
     // 这个是隐藏Input标签的相应JS对象
     var inputElement = document.getElementById("input");
     // inputElement.addEventListener("change", fileChanging(), false);
+
+    // 打开配置JSON函数
+    function openHelperJSON() {
+      filePath = stringCodeHelperPath;
+      helperJSON = JSON.parse(stringCodeHelper.readFileSync(stringCodeHelperPath));
+      fileOpening(JSON.stringify(helperJSON));
+      // 设置当前文件路径（全局）并更新到显示位置
+      document.title = "String - " + filePath;
+      $$("filePath").setHTML(filePath);
+      switchLanguage();
+    };
 
     // 新建文件函数，使用FileSaver.js库
     function fileCreating() {
@@ -420,21 +445,51 @@
     };
 
     // 这是点击 codeBar 按钮的函数，切换显示和隐藏
+    let firstOpenHelper = true;
     function codeBar() {
       if ($$("codeBar").isVisible()) {
         $$("codeBar").hide();
       } else {
         $$("codeBar").show();
+        if (firstOpenHelper) {
+          helperReload();
+          firstOpenHelper = false;
+        };
       };
+    };
+
+    // 重新加载Helper
+
+    function helperReload() {
+      stringCodeHelperDef = JSON.parse(stringCodeHelper.readFileSync(stringCodeHelperPath));
+      $$("helperTree").clearAll();
+      $$("helperTree").parse({
+        pos: $$("helperTree").count(),
+        data: stringCodeHelperDef
+      });
+      $$("helperTree").refresh();
+      console.log("helper数组",stringCodeHelperDef);
     };
 
     // 点击 switchEditor 按钮的函数
     function switchEditor() {
       if ($$("stringEditor").isVisible()) {
+        try { stringCodeHelper.writeFileSync(stringCodeHelperPath, JSON.stringify(stringCodeHelperDef), 'utf-8'); }
+        catch (e) { alert('配置文件存储失败！无法生成配置文件。'); };
+        console.log(stringCodeHelperDef);
         $$("stringEditor").hide();
         $$("toolbar").hide();
         $$("helperEditor").show();
+
+        // $$("helperTreetable").parse({
+        //   pos: $$("helperTreetable").count(), //number of records will be right the last index +1
+        //   data: stringCodeHelperDef
+        // });
+        // $$("helperTreetable").refresh();
       } else {
+        try { stringCodeHelper.writeFileSync(stringCodeHelperPath, JSON.stringify(stringCodeHelperDef), 'utf-8'); }
+        catch (e) { alert('配置文件存储失败！无法生成配置文件。'); };
+        console.log(stringCodeHelperDef);
         $$("stringEditor").show();
         $$("toolbar").show();
         $$("helperEditor").hide();
