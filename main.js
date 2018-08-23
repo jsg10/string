@@ -5,10 +5,13 @@ const ipc = require('electron').ipcMain;
 // Menu 菜单功能
 // 主要参考这篇教程 https://coursetro.com/posts/code/119/Working-with-Electron-Menus---Tutorial
 
-let win;
+let win; // 防止窗口对象被垃圾回收
 function createWindow() {
 
-    win = new BrowserWindow({ width: 720, height: 640, backgroundColor: '#191919', title: "String" /* , titleBarStyle: 'hidden' */});
+    win = new BrowserWindow({ width: 750, height: 640,
+        minHeight: 500,
+        minWidth: 720,
+        backgroundColor: '#191919', title: "String" /* , titleBarStyle: 'hidden' */ });
     win.loadFile('index.html');
 
     // 在创建窗口时，先定义菜单；
@@ -41,7 +44,17 @@ function createWindow() {
     Menu.setApplicationMenu(menu);
 
     // 打开开发者工具
-    win.webContents.openDevTools();
+    // win.webContents.openDevTools();
+
+    // 当 window 进入全屏时
+    win.on('enter-full-screen', () => {
+        win.webContents.send('excuteCom', "enterFullscreen");
+    });
+
+    // 当 window 退出全屏时
+    win.on('leave-full-screen', () => {
+        win.webContents.send('excuteCom', "exitFullscreen");
+    })
 
     // 当 window 被关闭，这个事件会被触发。
     win.on('closed', () => {

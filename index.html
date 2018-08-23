@@ -69,6 +69,10 @@
       // lineHeight: 1,
     });
 
+    // 当前窗口的Remote对象；
+    const curWindow = require('electron').remote.getCurrentWindow();
+    //curWindow.setFullScreen(true);
+
     // 从remote对象中引入主进程的app对象
     // 获取用户配置的存储位置，生成 ~/stringide/stringCodeHelper.json
     const app = require('electron').remote.app;
@@ -136,232 +140,289 @@
         theme: "vs-dark",
         language: 'javascript',
         fontSize: 13,
-        fontFamily: "Menlo"
+        fontFamily: "Menlo",
+        // 文本自动Wrap
+        wordWrap: 'wordWrapColumn',
+        wordWrapColumn: 78,
+
+        // Set this to false to not auto word wrap minified files
+        wordWrapMinified: true,
+
+        // try "same", "indent" or "none"
+        wrappingIndent: "indent"
       });
     });
 
     // 这个是用Webix声明的界面布局
     // toolbar, stringEditor, helperEditor, terminal
-    webix.ui({
-      view: "layout",
-      // width: 800,
-      responsive: true,
-      border: 1,
-      rows: [
-        // toolbar
-        {
-          id: "toolbar", view: "toolbar", height: 30, elements: [
-            // { view: "icon", id: "fileCreateBTN", click: "fileCreating()", icon: "file" },
-            { view: "icon", id: "fileOpenBTN", click: "fileLoading()", icon: "folder-open" },
-            { view: "icon", id: "fileSaveBTN", click: "fileSaving()", icon: "save" },
-            { view: "icon", id: "terminalBTN", click: "terminal()", icon: "terminal" },
-            { view: "template", id: "filePath", template: filePath, width: 0, minWidth: 500, type: "clean" },
-            { gravity: 2 },
-            // { view: "icon", id: "dbHelper", click: "dbHelper()", icon: "database" },
+    webix.ui(
+      {
+        id: "windowUI",
+        view: "layout",
+        responsive: true,
+        cols: [
 
-            { view: "icon", id: "codeBarBTN", click: "codeBar()", icon: "book" },
-          ]
-        },
+          {
+            id: "winLeft",
+            view: "htmlform",
+            width: 0,
+            hidden: true
+          }
+          ,
+          {
+            view: "layout",
+            responsive: true,
+            border: 1,
+            rows: [
+              // toolbar
+              {
+                id: "toolbar", view: "toolbar", height: 28, elements: [
+                  // { view: "icon", id: "fileCreateBTN", click: "fileCreating()", icon: "file" },
+                  { view: "icon", id: "fileOpenBTN", click: "fileLoading()", icon: "folder-open" },
+                  { view: "icon", id: "fileSaveBTN", click: "fileSaving()", icon: "save" },
+                  { view: "template", id: "filePath", template: filePath, width: 0, minWidth: 500, type: "clean" },
+                  { gravity: 2 },
+                  { view: "icon", id: "terminalBTN", click: "terminal()", icon: "terminal" },
+                  { view: "icon", id: "zenBTN", click: "zenLayout()", icon: "desktop" },
+                  // { view: "icon", id: "dbHelper", click: "dbHelper()", icon: "database" },
+                  { view: "icon", id: "codeBarBTN", click: "codeBar()", icon: "book" },
+                ]
+              },
 
-        // stringEditor
-        {
-          id: "stringEditor",
-          width: 0, // 0表示自适应宽度
-          hidden: false,
-          cols: [
-            {
-              view: "template", template: "<div id=\"container\" onchange=\"needSave()\" style=\"width:100%;height:100%;margin:0;padding:0\"></div>", css: "no_paddingNDmargin"
-            },
-            {
-              view: "layout",
-              id: "codeBar",
-              width: 240,
-              hidden: true,
-              autoheight: true,
-              rows: [
-                {
-                  id: "helperTree",
-                  view: "tree",
-                  type: "lineTree",
-                  multiselect: true,
-                  select: true,
-                  drag: true,
-                  // hidden: true,
-                  autoheight: true,
-                  width: 240,
-                  data: stringCodeHelperDef,
-                  datatype: "json",
-                  // [
-                  //   { "value": "单行注释", "code": "\/\/ 注释内容" },
-                  //   { "value": "多行注释", "code": "\/\/ 注释内容1\n\/\/ 注释内容2\n\/\/ 注释内容3" },
-                  //   {
-                  //     "value": "GO程序骨架", "open": true, "code": "\/\/ /包相对路径/hello \npackage main\nimport \"fmt\"\n\nfunc main() {\n\tfmt.Println(\"Hello, 世界\")\n}",
-                  //     "data": [
-                  //       { "value": "包声明：package", "code": "package main" },
-                  //       { "value": "引入包：import", "code": "import (\n\t\"fmt\"\n\t\"os\"\n)" },
-                  //       { "value": "函数声明：func", "code": "\/\/ 这是main函数的注释\nfunc main() {\n\tvar s, sep string\n\tfor i := 1; i < len(os.Args); i++ {\n\t\ts += sep + os.Args[i]\n\t\tsep = \" \"\n\t}\n\tfmt.Println(s)\n}" }
-                  //     ]
-                  //   },
-                  //   {
-                  //     "value": "GO语言关键字", "open": false, "code": "\/\/ break      default       func     interface   select\ncase       defer         go       map         struct\nchan       else          goto     package     switch\nconst      fallthrough   if       range       type\ncontinue   for           import   return      var",
+              // stringEditor
+              {
+                id: "stringEditor",
+                width: 0, // 0表示自适应宽度
+                hidden: false,
+                cols: [
+                  {
+                    id: "monacoEditor",
+                    view: "template", template: "<div id=\"container\" onchange=\"needSave()\" style=\"width:100%;height:100%;margin:0;padding:0\"></div>", css: "no_paddingNDmargin"
+                  },
+                  {
+                    view: "layout",
+                    id: "codeBar",
+                    width: 240,
+                    hidden: true,
+                    autoheight: true,
+                    rows: [
+                      {
+                        id: "helperTree",
+                        view: "tree",
+                        type: "lineTree",
+                        multiselect: true,
+                        select: true,
+                        drag: true,
+                        // hidden: true,
+                        autoheight: true,
+                        width: 240,
+                        data: stringCodeHelperDef,
+                        datatype: "json",
+                        // [
+                        //   { "value": "单行注释", "code": "\/\/ 注释内容" },
+                        //   { "value": "多行注释", "code": "\/\/ 注释内容1\n\/\/ 注释内容2\n\/\/ 注释内容3" },
+                        //   {
+                        //     "value": "GO程序骨架", "open": true, "code": "\/\/ /包相对路径/hello \npackage main\nimport \"fmt\"\n\nfunc main() {\n\tfmt.Println(\"Hello, 世界\")\n}",
+                        //     "data": [
+                        //       { "value": "包声明：package", "code": "package main" },
+                        //       { "value": "引入包：import", "code": "import (\n\t\"fmt\"\n\t\"os\"\n)" },
+                        //       { "value": "函数声明：func", "code": "\/\/ 这是main函数的注释\nfunc main() {\n\tvar s, sep string\n\tfor i := 1; i < len(os.Args); i++ {\n\t\ts += sep + os.Args[i]\n\t\tsep = \" \"\n\t}\n\tfmt.Println(s)\n}" }
+                        //     ]
+                        //   },
+                        //   {
+                        //     "value": "GO语言关键字", "open": false, "code": "\/\/ break      default       func     interface   select\ncase       defer         go       map         struct\nchan       else          goto     package     switch\nconst      fallthrough   if       range       type\ncontinue   for           import   return      var",
 
-                  //     "data": [
+                        //     "data": [
 
-                  //       { "value": "const", "code": "" },
-                  //       { "value": "var", "code": "" },
-                  //       { "value": "struct", "code": "" },
-                  //       { "value": "interface", "code": "" },
-                  //       { "value": "map", "code": "" },
+                        //       { "value": "const", "code": "" },
+                        //       { "value": "var", "code": "" },
+                        //       { "value": "struct", "code": "" },
+                        //       { "value": "interface", "code": "" },
+                        //       { "value": "map", "code": "" },
 
-                  //       { "value": "package", "code": "" },
-                  //       { "value": "import", "code": "" },
-                  //       { "value": "func", "code": "" },
+                        //       { "value": "package", "code": "" },
+                        //       { "value": "import", "code": "" },
+                        //       { "value": "func", "code": "" },
 
-                  //       { "value": "if", "code": "" },
-                  //       { "value": "else", "code": "" },
-                  //       { "value": "for", "code": "" },
-                  //       { "value": "switch", "code": "" },
-                  //       { "value": "return", "code": "" },
-                  //       { "value": "break", "code": "" },
+                        //       { "value": "if", "code": "" },
+                        //       { "value": "else", "code": "" },
+                        //       { "value": "for", "code": "" },
+                        //       { "value": "switch", "code": "" },
+                        //       { "value": "return", "code": "" },
+                        //       { "value": "break", "code": "" },
 
-                  //       { "value": "chan", "code": "" },
-                  //       { "value": "select", "code": "" },
-                  //       { "value": "default", "code": "" },
-                  //       { "value": "go", "code": "" },
-                  //       { "value": "fallthrough", "code": "" },
-                  //       { "value": "goto", "code": "" },
-                  //       { "value": "defer", "code": "" },
-                  //       { "value": "case", "code": "" },
-                  //       { "value": "continue", "code": "" },
-                  //       { "value": "type", "code": "" },
-                  //       { "value": "range", "code": "" }
-                  //     ]
-                  //   },
-                  //   { "value": "GO语言圣经", "code": "\/\/ 更多内容请参考：\n\/\/ https://wizardforcel.gitbooks.io/gopl-zh/content/index.html" }
-                  // ]
-                }
-                ,
-                {
-                  view: "toolbar", height: 30, elements: [
-                    { view: "icon", id: "helperReload", click: "helperReload()", icon: "retweet" },
-                    { gravity: 2 },
-                    { view: "icon", id: "switchEditorBTN", click: "openHelperJSON()", icon: "edit" },
-                  ]
-                }
-                ,
-              ]
-            },
-          ]
-        }
-        ,
-        // helperEditor
-        {
-          id: "helperEditor",
-          width: 0, // 0表示自适应宽度
-          hidden: true,
-          view: "layout",
-          // autoheight: true,
-          rows: [
-            // {
-            //   id: "helperTreetable",
-            //   view: "treetable",
-            //   // type: "lineTree",
-            //   multiselect: true,
-            //   select: true,
-            //   drag: true,
-            //   width: 0,
-            //   height: 0,
-            //   // autoheight: true,
-            //   // autowidth: true,
-            //   // scheme: {
-            //   //   $group: "year"
-            //   // },
-            //   scroll: true,
-            //   spans: true,
-            //   columns: [
-            //     {
-            //       id: "id",
-            //       header: "目录",
-            //       template: "{common.treetable()}",
-            //       width: 80,
-            //     },
-            //     {
-            //       id: "value",
-            //       header: "块名称",
-            //       editor: "text",
-            //       // template: "{common.treetable()} #value#",
-            //       width: 200,
-            //     },
-            //     {
-            //       id: "code",
-            //       header: "代码块儿",
-            //       editor: "text",
-            //       width: 400
-            //     }
-            //   ],
-            //   editable: true,
-            //   data: stringCodeHelperDef,
-            //   datatype: "json",
-            // }
-            // ,
-            {
-              view: "toolbar", width: 0, height: 30, elements: [
-                { view: "icon", id: "newHelper", click: "", icon: "plus-circle" },
-                { gravity: 2 },
-                { view: "icon", id: "switchEditorBTN", click: "openHelperJSON()", icon: "edit" },
-              ]
-            }
-            ,
-          ]
+                        //       { "value": "chan", "code": "" },
+                        //       { "value": "select", "code": "" },
+                        //       { "value": "default", "code": "" },
+                        //       { "value": "go", "code": "" },
+                        //       { "value": "fallthrough", "code": "" },
+                        //       { "value": "goto", "code": "" },
+                        //       { "value": "defer", "code": "" },
+                        //       { "value": "case", "code": "" },
+                        //       { "value": "continue", "code": "" },
+                        //       { "value": "type", "code": "" },
+                        //       { "value": "range", "code": "" }
+                        //     ]
+                        //   },
+                        //   { "value": "GO语言圣经", "code": "\/\/ 更多内容请参考：\n\/\/ https://wizardforcel.gitbooks.io/gopl-zh/content/index.html" }
+                        // ]
+                      }
+                      ,
+                      {
+                        view: "toolbar", height: 28, elements: [
+                          { view: "icon", id: "helperReload", click: "helperReload()", icon: "retweet" },
+                          { gravity: 2 },
+                          { view: "icon", id: "switchEditorBTN", click: "openHelperJSON()", icon: "edit", height: 10 },
+                        ]
+                      }
+                      ,
+                    ]
+                  },
+                ]
+              }
+              ,
+              // helperEditor
+              {
+                id: "helperEditor",
+                width: 0, // 0表示自适应宽度
+                hidden: true,
+                view: "layout",
+                // autoheight: true,
+                rows: [
+                  // {
+                  //   id: "helperTreetable",
+                  //   view: "treetable",
+                  //   // type: "lineTree",
+                  //   multiselect: true,
+                  //   select: true,
+                  //   drag: true,
+                  //   width: 0,
+                  //   height: 0,
+                  //   // autoheight: true,
+                  //   // autowidth: true,
+                  //   // scheme: {
+                  //   //   $group: "year"
+                  //   // },
+                  //   scroll: true,
+                  //   spans: true,
+                  //   columns: [
+                  //     {
+                  //       id: "id",
+                  //       header: "目录",
+                  //       template: "{common.treetable()}",
+                  //       width: 80,
+                  //     },
+                  //     {
+                  //       id: "value",
+                  //       header: "块名称",
+                  //       editor: "text",
+                  //       // template: "{common.treetable()} #value#",
+                  //       width: 200,
+                  //     },
+                  //     {
+                  //       id: "code",
+                  //       header: "代码块儿",
+                  //       editor: "text",
+                  //       width: 400
+                  //     }
+                  //   ],
+                  //   editable: true,
+                  //   data: stringCodeHelperDef,
+                  //   datatype: "json",
+                  // }
+                  // ,
+                  {
+                    view: "toolbar", width: 0, height: 30, elements: [
+                      { view: "icon", id: "newHelper", click: "", icon: "plus-circle" },
+                      { gravity: 2 },
+                      { view: "icon", id: "switchEditorBTN", click: "openHelperJSON()", icon: "edit" },
+                    ]
+                  }
+                  ,
+                ]
 
-        }
-        ,
-        // terminal
-        {
-          id: "terminalResizer",
-          view: "resizer",
-          height: 2,
-          hidden: true
-        },
-        {
-          id: "terminal",
-          view: "template",
-          //css: "",
-          height: 400,
-          width: 0,
-          template: "<div id=\"terminalPan\" style=\"height:100%;width:100%\"></div>",
-          hidden: true
-        }
-      ]
-
-    });
+              }
+              ,
+              // terminal
+              {
+                id: "terminalResizer",
+                view: "resizer",
+                height: 2,
+                hidden: true
+              },
+              {
+                id: "terminal",
+                view: "template",
+                //css: "",
+                height: 400,
+                width: 0,
+                template: "<div id=\"terminalPan\" style=\"height:100%;width:100%\"></div>",
+                hidden: true
+              }
+              ,
+            ]
+          }
+          ,
+          {
+            id: "winRight",
+            view: "htmlform",
+            width: 0,
+            hidden: true
+          }
+        ]
+      }
+    );
 
     // 这个是隐藏Input标签的相应JS对象
     var inputElement = document.getElementById("input");
     // inputElement.addEventListener("change", fileChanging(), false);
 
+    // 【禅】窗口功能 zenLayout
+    // 改变Webix元素尺寸然后Resize的方法参见：
+    // https://docs.webix.com/api__link__ui.icon_resize.html
+    // 这是点击 codeBar 按钮的函数，切换显示和隐藏
+    let isZenlayout = false;
+    function zenLayout() {
+      if (!isZenlayout) {
+        $$("winLeft").show();
+        $$("winRight").show();
+        $$("monacoEditor").config.width = 790;
+        $$("monacoEditor").resize();
+        curWindow.setFullScreen(true);
+        isZenlayout = true;
+      } else {
+        $$("monacoEditor").config.width = 0;
+        $$("monacoEditor").resize();
+        $$("windowUI").resize();
+        curWindow.setFullScreen(false);
+        $$("winLeft").hide();
+        $$("winRight").hide();
+        isZenlayout = false;
+      };
+    };
+
     // 打开配置JSON函数
     function openHelperJSON() {
       filePath = stringCodeHelperPath;
       helperJSON = JSON.parse(stringCodeHelper.readFileSync(stringCodeHelperPath));
-      fileOpening(JSON.stringify(helperJSON));
+      toCodeEditor(JSON.stringify(helperJSON));
       // 设置当前文件路径（全局）并更新到显示位置
       document.title = "String - " + filePath;
       $$("filePath").setHTML(filePath);
       switchLanguage();
     };
 
-    // 新建文件函数，使用FileSaver.js库
-    function fileCreating() {
-      // 引入FileSaver库，从编辑器里面存储
-      // var FileSaver = require('file-saver');
-      // var blob = new Blob([editor.getValue()], { type: "text/plain;charset=utf-8" });
-      // FileSaver.saveAs(blob, "新建文件.txt");
-      // console.log(FileSaver);
-      // 设置当前文件路径（全局）并更新到显示位置
-      // filePath = file.path;
-      // $$("filePath").setHTML(filePath);
-    };
+    // // 新建文件函数，使用FileSaver.js库
+    // function fileCreating() {
+    //   // 引入FileSaver库，从编辑器里面存储
+    //   // var FileSaver = require('file-saver');
+    //   // var blob = new Blob([editor.getValue()], { type: "text/plain;charset=utf-8" });
+    //   // FileSaver.saveAs(blob, "新建文件.txt");
+    //   // console.log(FileSaver);
+    //   // 设置当前文件路径（全局）并更新到显示位置
+    //   // filePath = file.path;
+    //   // $$("filePath").setHTML(filePath);
+    // };
 
     // 处理打开的文件从中读取出文本信息并传递给编辑器更新函数
     function fileChanging(f) {
@@ -382,7 +443,7 @@
         var reader = new FileReader();
         reader.onload = function () {
           // 生成（初始化）编辑器，并且将读取到的文本内容注入到编辑器的Set方法
-          fileOpening(reader.result);
+          toCodeEditor(reader.result);
         }
         reader.readAsText(file);
         // 设置当前文件路径（全局）并更新到显示位置
@@ -399,13 +460,16 @@
     };
 
     // 将代码载入Monaco编辑器，更新编辑器内容
-    function fileOpening(codeInEditor) {
+    function toCodeEditor(codeInEditor) {
       // 更新编辑器内容
       editor.setValue([codeInEditor].join('\n'));
     };
 
     // 当前代码编辑器发生变化的监听函数
-
+    // Monitor the text change event
+    // editor.onDidChangeModelContent(() => {
+    //   needSave();
+    // });
 
     // 标记当前文件需要保存的函数
     function needSave() {
@@ -459,7 +523,6 @@
     };
 
     // 重新加载Helper
-
     function helperReload() {
       stringCodeHelperDef = JSON.parse(stringCodeHelper.readFileSync(stringCodeHelperPath));
       $$("helperTree").clearAll();
@@ -468,33 +531,27 @@
         data: stringCodeHelperDef
       });
       $$("helperTree").refresh();
-      console.log("helper数组",stringCodeHelperDef);
+      console.log("helper数组", stringCodeHelperDef);
     };
 
     // 点击 switchEditor 按钮的函数
-    function switchEditor() {
-      if ($$("stringEditor").isVisible()) {
-        try { stringCodeHelper.writeFileSync(stringCodeHelperPath, JSON.stringify(stringCodeHelperDef), 'utf-8'); }
-        catch (e) { alert('配置文件存储失败！无法生成配置文件。'); };
-        console.log(stringCodeHelperDef);
-        $$("stringEditor").hide();
-        $$("toolbar").hide();
-        $$("helperEditor").show();
-
-        // $$("helperTreetable").parse({
-        //   pos: $$("helperTreetable").count(), //number of records will be right the last index +1
-        //   data: stringCodeHelperDef
-        // });
-        // $$("helperTreetable").refresh();
-      } else {
-        try { stringCodeHelper.writeFileSync(stringCodeHelperPath, JSON.stringify(stringCodeHelperDef), 'utf-8'); }
-        catch (e) { alert('配置文件存储失败！无法生成配置文件。'); };
-        console.log(stringCodeHelperDef);
-        $$("stringEditor").show();
-        $$("toolbar").show();
-        $$("helperEditor").hide();
-      };
-    };
+    // function switchEditor() {
+    //   if ($$("stringEditor").isVisible()) {
+    //     try { stringCodeHelper.writeFileSync(stringCodeHelperPath, JSON.stringify(stringCodeHelperDef), 'utf-8'); }
+    //     catch (e) { alert('配置文件存储失败！无法生成配置文件。'); };
+    //     console.log(stringCodeHelperDef);
+    //     $$("stringEditor").hide();
+    //     $$("toolbar").hide();
+    //     $$("helperEditor").show();
+    //   } else {
+    //     try { stringCodeHelper.writeFileSync(stringCodeHelperPath, JSON.stringify(stringCodeHelperDef), 'utf-8'); }
+    //     catch (e) { alert('配置文件存储失败！无法生成配置文件。'); };
+    //     console.log(stringCodeHelperDef);
+    //     $$("stringEditor").show();
+    //     $$("toolbar").show();
+    //     $$("helperEditor").hide();
+    //   };
+    // };
 
     // 这是点击 terminal 按钮的函数，切换显示和隐藏
     var isTerm = false;
@@ -516,8 +573,20 @@
       const { app } = require('electron').remote;
       const atPath = app.getPath('desktop');
       const { spawn } = require('child_process');
-      let openTerminalAtPath = spawn('open', ['-a', 'Terminal', atPath]);
-      openTerminalAtPath.on('error', (err) => { console.log(err); });
+
+      let folderPath = "";
+      if (filePath !== "") {
+        // 获得当前文件所在的文件夹路径
+        folderPath = path.dirname(filePath);
+        console.log("Folder Path: ", folderPath);
+        // 打开终端，访问文件夹路径
+        let openTerminalAtPath = spawn('open', ['-a', 'Terminal', folderPath]);
+        openTerminalAtPath.on('error', (err) => { console.log(err); });
+      } else {
+        // 打开终端，访问桌面路径
+        let openTerminalAtPath = spawn('open', ['-a', 'Terminal', atPath]);
+        openTerminalAtPath.on('error', (err) => { console.log(err); });
+      };
     };
 
     // function setupTerm() {
@@ -603,6 +672,25 @@
           if (filePath !== "") {
             fileSaving();
           };
+          console.log("Switch函数收到了信号" + arg);
+          break;
+        case "enterFullscreen":
+          $$("winLeft").show();
+          $$("winRight").show();
+          $$("monacoEditor").config.width = 790;
+          $$("monacoEditor").resize();
+          curWindow.setFullScreen(true);
+          isZenlayout = true;
+          console.log("Switch函数收到了信号" + arg);
+          break;
+        case "exitFullscreen":
+          $$("monacoEditor").config.width = 0;
+          $$("monacoEditor").resize();
+          $$("windowUI").resize();
+          curWindow.setFullScreen(false);
+          $$("winLeft").hide();
+          $$("winRight").hide();
+          isZenlayout = false;
           console.log("Switch函数收到了信号" + arg);
           break;
         default:
