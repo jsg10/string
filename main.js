@@ -9,8 +9,8 @@ let win; // 防止窗口对象被垃圾回收
 function createWindow() {
 
     win = new BrowserWindow({ width: 750, height: 640,
-        minHeight: 500,
-        minWidth: 720,
+        minHeight: 320,
+        minWidth: 750,
         backgroundColor: '#191919', title: "String" /* , titleBarStyle: 'hidden' */ });
     win.loadFile('index.html');
 
